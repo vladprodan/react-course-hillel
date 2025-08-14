@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="uk">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Todo List</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="container">
+      <div class="card">
+        <div class="card-header">
+          <h1 class="card-title">Список завдань</h1>
+          <p class="card-description">
+            Керуйте своїми завданнями та пріоритетами
+          </p>
+        </div>
+
+        <div class="card-content">
+          <div class="form-grid">
+            <div class="form-row">
+              <div class="form-group">
+                <label class="label" for="taskInput">Завдання</label>
+                <input
+                  type="text"
+                  id="taskInput"
+                  class="input"
+                  placeholder="Що потрібно зробити?"
+                />
+              </div>
+              <div class="form-group">
+                <label class="label" for="prioritySelect">Пріоритет</label>
+                <select id="prioritySelect" class="select">
+                  <option value="low">Низький</option>
+                  <option value="medium" selected>Середній</option>
+                  <option value="high">Високий</option>
+                </select>
+              </div>
+              <button class="btn btn-default" onclick="addTask()">
+                Додати
+              </button>
+            </div>
+          </div>
+
+          <div class="filter-container">
+            <div class="filter-buttons">
+              <button class="filter-btn active" onclick="filterTasks('all')">
+                Всі
+              </button>
+              <button class="filter-btn" onclick="filterTasks('high')">
+                Високий
+              </button>
+              <button class="filter-btn" onclick="filterTasks('medium')">
+                Середній
+              </button>
+              <button class="filter-btn" onclick="filterTasks('low')">
+                Низький
+              </button>
+            </div>
+          </div>
+
+          <div id="todoList">
+            <div class="empty-state">
+              <h3>Немає завдань</h3>
+              <p>Додайте своє перше завдання, щоб розпочати</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let tasks = [];
+      let currentFilter = "all";
+      let editingId = null;
+
+      function addTask() {
+        const taskInput = document.getElementById("taskInput");
+        const prioritySelect = document.getElementById("prioritySelect");
+
+        const taskText = taskInput.value.trim();
+
+        if (taskText === "") {
+          alert("Будь ласка, введіть текст завдання");
+          return;
+        }
+
+        const newTask = {
+          id: Date.now(),
+          text: taskText,
+          priority: prioritySelect.value,
+        };
+
+        tasks.push(newTask);
+        taskInput.value = "";
+        prioritySelect.value = "medium";
+
+        renderTasks();
+      }
+
+      function deleteTask(id) {
+        if (confirm("Видалити це завдання?")) {
+          tasks = tasks.filter((task) => task.id !== id);
+          renderTasks();
+        }
+      }
+
+      function startEdit(id) {
+        if (editingId !== null) {
+          cancelEdit();
+        }
+
+        editingId = id;
+        renderTasks();
+
+        // Focus на input після рендеру
+        setTimeout(() => {
+          const editInput = document.querySelector(
+            `[data-task-id="${id}"] .edit-input`
+          );
+          if (editInput) {
+            editInput.focus();
+          }
+        }, 0);
+      }
+
+      function saveEdit(id) {
+        const taskElement = document.querySelector(`[data-task-id="${id}"]`);
+        const editInput = taskElement.querySelector(".edit-input");
+        const newText = editInput.value.trim();
+
+        if (newText === "") {
+          alert("Текст завдання не може бути порожнім");
+          return;
+        }
+
+        const taskIndex = tasks.findIndex((task) => task.id === id);
+        tasks[taskIndex].text = newText;
+
+        editingId = null;
+        renderTasks();
+      }
+
+      function cancelEdit() {
+        editingId = null;
+        renderTasks();
+      }
+
+      function filterTasks(filter) {
+        currentFilter = filter;
+
+        // Оновити активну кнопку фільтра
+        document.querySelectorAll(".filter-btn").forEach((btn) => {
+          btn.classList.remove("active");
+        });
+        event.target.classList.add("active");
+
+        renderTasks();
+      }
+
+      function renderTasks() {
+        const todoList = document.getElementById("todoList");
+
+        let filteredTasks = tasks;
+        if (currentFilter !== "all") {
+          filteredTasks = tasks.filter(
+            (task) => task.priority === currentFilter
+          );
+        }
+
+        if (filteredTasks.length === 0) {
+          const emptyMessage =
+            currentFilter === "all"
+              ? "Додайте своє перше завдання, щоб розпочати"
+              : "Немає завдань з таким пріоритетом";
+
+          todoList.innerHTML = `
+                    <div class="empty-state">
+                        <h3>Немає завдань</h3>
+                        <p>${emptyMessage}</p>
+                    </div>
+                `;
+          return;
+        }
+
+        todoList.innerHTML = filteredTasks
+          .map((task) => {
+            const priorityLabels = {
+              high: "Високий",
+              medium: "Середній",
+              low: "Низький",
+            };
+
+            const isEditing = editingId === task.id;
+
+            return `
+                    <div class="todo-item" data-task-id="${task.id}">
+                        <div class="todo-content">
+                            <div class="todo-text" style="${
+                              isEditing ? "display: none;" : ""
+                            }">${task.text}</div>
+                            <input 
+                                type="text" 
+                                class="edit-input ${isEditing ? "active" : ""}" 
+                                value="${task.text}"
+                                style="${
+                                  isEditing
+                                    ? "display: block;"
+                                    : "display: none;"
+                                }"
+                            >
+                        </div>
+                        <div class="todo-meta">
+                            <span class="badge badge-${task.priority}">${
+              priorityLabels[task.priority]
+            }</span>
+                            <div class="todo-actions">
+                                ${
+                                  isEditing
+                                    ? `
+                                    <button class="btn btn-sm btn-secondary" onclick="saveEdit(${task.id})">Зберегти</button>
+                                    <button class="btn btn-sm btn-outline" onclick="cancelEdit()">Скасувати</button>
+                                `
+                                    : `
+                                    <button class="btn btn-sm btn-outline" onclick="startEdit(${task.id})">Редагувати</button>
+                                    <button class="btn btn-sm btn-destructive" onclick="deleteTask(${task.id})">Видалити</button>
+                                `
+                                }
+                            </div>
+                        </div>
+                    </div>
+                `;
+          })
+          .join("");
+      }
+
+      // Event listeners
+      document
+        .getElementById("taskInput")
+        .addEventListener("keypress", function (e) {
+          if (e.key === "Enter") {
+            addTask();
+          }
+        });
+
+      document.addEventListener("keypress", function (e) {
+        if (e.key === "Enter" && editingId !== null) {
+          saveEdit(editingId);
+        }
+      });
+
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape" && editingId !== null) {
+          cancelEdit();
+        }
+      });
+    </script>
+  </body>
+</html>
